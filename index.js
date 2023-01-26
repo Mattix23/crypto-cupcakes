@@ -21,11 +21,11 @@ app.use(express.urlencoded({ extended: true }));
 // define the config object
 // attach Auth0 OIDC auth router
 // create a GET / route handler that sends back Logged in or Logged out
-const { MY_SECRET, BASE_URL, CLIENT_ID, AUTH0_DOMAIN } = process.env;
+
 
 const {
   AUTH0_SECRET, // generate one by using: `openssl rand -base64 32`
-  AUTH0_AUDIENCE = "http://localhost:3000",
+  AUTH0_AUDIENCE,
   AUTH0_CLIENT_ID,
   AUTH0_BASE_URL,
 } = process.env;
@@ -41,9 +41,23 @@ const config = {
 
 app.use(auth(config));
 
+app.use(async (req, res, next) => {
+  const [user] = await User.findOrCreate({
+    where: {
+      username: req.oidc.user.nickname,
+      name: req.oidc.user.name,
+      email: req.oidc.user.email,
+    }
+  });
+  console.log(user)
+  next();
+});
+
 app.get("/", (req, res) => {
+  console.log(req.oidc.user);
   res.send(req.oidc.isAuthenticated() ? 
-  `<h1>Welcome ${req.oidc.user.name}</h1>
+  `<h2 style="text-align: center;">Crypto Cupcakes, Inc.</h2>
+  <h1>Welcome ${req.oidc.user.name}</h1>
   <h2><i>Username: ${req.oidc.user.nickname}</i></h2>
   <h3>Email: ${req.oidc.user.email}</h3>
   <img src=${req.oidc.user.picture}>`  : "Logged out");
