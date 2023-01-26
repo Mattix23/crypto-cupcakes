@@ -5,6 +5,8 @@ const app = express();
 const morgan = require("morgan");
 const { PORT = 3000 } = process.env;
 const { auth } = require("express-openid-connect");
+const jwt = require('jsonwebtoken');
+const {JWT_SECRET} = process.env;
 // TODO - require express-openid-connect and destructure auth from it
 
 const { User, Cupcake } = require("./db");
@@ -72,6 +74,22 @@ app.get("/cupcakes", async (req, res, next) => {
   }
 });
 
+app.get("/me", async (req,res) => {
+  const user = await User.findOne({
+    where: {
+      username: req.oidc.user.nickname
+    },
+    raw: true,
+  })
+
+  if(user) {
+    const token = jwt.sign(user, JWT_SECRET, {expiresIn: '1w'});
+    res.send({user, token})
+  } else{
+    res.status(401).send("User not found");
+    next();
+  }
+});
 // error handling middleware
 app.use((error, req, res, next) => {
   console.error("SERVER ERROR: ", error);
